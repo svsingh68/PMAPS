@@ -1,16 +1,13 @@
 # This Python file uses the following encoding: utf-8
-import os
-import time
-from pathlib import Path
 import sys
-import datetime
+
 import random
 from fpdf import FPDF
-import textwrap
+
 
 import comtrade
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSignal,QThread
+
 
 from PyQt5 import uic
 import pandas as pd
@@ -21,9 +18,13 @@ import pyqtgraph as pg
 import pickle
 from comtrade import Comtrade
 from scipy import signal
+from scipy import stats
 import PPF as ppf
 from segmentation import *
-# from matplotlib.gridspec import GridSpec
+from pprint import pprint
+from collections import defaultdict
+# from PIL import Image
+# from functools import reduce
 
 
 # import plotly.graph_objects as go
@@ -55,6 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.number_of_files = 0
         self.com = Comtrade()  # Initializing at start so that it can be reused for all files.
+    
 
         self.hidden = False
         self.b = None
@@ -142,24 +144,39 @@ class MainWindow(QtWidgets.QMainWindow):
  
         # self.PB_report.clicked.connect(self.get_segmented_plots)
         self.PB_report.clicked.connect(self.generate_report)
+        # self.PB_correlate.clicked.connect(self.correlation_data)
         # self.PB_hide_gb2.clicked.connect(self.hide_gb2)
         # Default settings
         # self.LE_power_selection.setEnabled(False)
 
         self.plot_widget1.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget1.setBackground('w')
         self.plot_widget2.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget2.setBackground('w')
         self.plot_widget3.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget3.setBackground('w')
         self.plot_widget4.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget4.setBackground('w')
         self.plot_widget5.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget5.setBackground('w')
         self.plot_widget6.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget6.setBackground('w')
         self.plot_widget_7.showGrid(x=True,y=True,alpha=1)
+        self.plot_widget_7.setBackground('w')
         self.plot_widget8.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget8.setBackground('w')
         self.plot_widget9.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget9.setBackground('w')
         self.segment_plot.showGrid(x=True,y=True,alpha=1)
+        self.segment_plot.setBackground('w')
         self.plot_widget10.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget10.setBackground('w')
         # self.plot_widget11.showGrid(x=True, y=True, alpha=1)
         # self.plot_widget12.showGrid(x=True, y=True, alpha=1)
         self.plot_widget13.showGrid(x=True, y=True, alpha=1)
+        self.plot_widget13.setBackground('w')
+        self.correlation_plot.showGrid(x = True, y = True, alpha = 1)
+        self.correlation_plot.setBackground('w')
         # self.correlation_plot.showGrid(x=True, y=True, alpha=1)
         self.groupBox.setEnabled(False)
         # self.segment_shift = {}
@@ -173,6 +190,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         self.signal_dataItems = {}
         self.difference_dataItems = {}
+        self.correlate_dataItems = {}
            
       
         # self.PB_plot.clicked.connect(self.plot)
@@ -193,11 +211,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_set_items = set([])
 
         try:
-            self.com.load(self.file_path)
+            self.com.load(self.file_path, encoding='cp1252')
             self.LW_attribute_list.clear()
             self.LW_attribute_list.addItems(self.com.analog_channel_ids)
             self.LW_voltage_set.clear()
             self.LW_current_set.clear()
+            print(self.com.station_name)
         except comtrade.ComtradeError as err:
             QtWidgets.QMessageBox.information(self,
                                               "Fail",
@@ -296,13 +315,13 @@ class MainWindow(QtWidgets.QMainWindow):
             if i % 3 == 0:
                 count += 1
                 df_dict[f'Va{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())]
+                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())] 
             if i % 3 == 1:
                 df_dict[f'Vb{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())]
+                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())] 
             if i % 3 == 2:
                 df_dict[f'Vc{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())]
+                    self.com.analog_channel_ids.index(self.LW_voltage_set.item(i).text())] 
 
         for i in range(count):
             df_dict[f'RMS_voltage {i + 1}'] = ppf.instaLL_RMSVoltage(df_dict['Time'], df_dict[f'Va{i + 1}'],
@@ -313,13 +332,13 @@ class MainWindow(QtWidgets.QMainWindow):
             if i % 3 == 0:
                 count += 1
                 df_dict[f'Ia{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())]
+                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())] 
             if i % 3 == 1:
                 df_dict[f'Ib{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())]
+                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())] 
             if i % 3 == 2:
-                df_dict[f'Ic{count}'] = self.com.analog[
-                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())]
+                df_dict[f'Ic{count}'] = self.com.analog[ 
+                    self.com.analog_channel_ids.index(self.LW_current_set.item(i).text())] 
 
         for i in range(count):
             df_dict[f'RMS_current {i + 1}'] = ppf.instaLL_RMSVoltage(df_dict['Time'], df_dict[f'Ia{i + 1}'],
@@ -330,6 +349,7 @@ class MainWindow(QtWidgets.QMainWindow):
       
 
         # For derived quantities calculations:
+        # Evaluating in the power selection, to check if multiple power/ derived quantities are to be calculated
         power_input = list(eval(self.LE_power_selection.text()))
         if type(power_input[0]) == int:
             if power_input[0] > number_of_voltage_sets or power_input[1] > number_of_current_sets:
@@ -342,35 +362,35 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 
                
-                va_dft = ppf.window_phasor(np.array(va), np.array(df['Time']), 1, 1)[0]
-                vb_dft = ppf.window_phasor(np.array(vb), np.array(df['Time']), 1, 1)[0]
-                vc_dft = ppf.window_phasor(np.array(vc), np.array(df['Time']), 1, 1)[0]
-                ia_dft = ppf.window_phasor(np.array(ia), np.array(df['Time']), 1, 1)[0]
-                ib_dft = ppf.window_phasor(np.array(ib), np.array(df['Time']), 1, 1)[0]
-                ic_dft = ppf.window_phasor(np.array(ic), np.array(df['Time']), 1, 1)[0]
+                df["DFT Va"] = ppf.window_phasor(np.array(va), np.array(df['Time']), 1, 1)[0]
+                df["DFT Vb"] = ppf.window_phasor(np.array(vb), np.array(df['Time']), 1, 1)[0]
+                df["DFT Vc"] = ppf.window_phasor(np.array(vc), np.array(df['Time']), 1, 1)[0]
+                df["DFT Ia"] = ppf.window_phasor(np.array(ia), np.array(df['Time']), 1, 1)[0]
+                df["DFT Ib"] = ppf.window_phasor(np.array(ib), np.array(df['Time']), 1, 1)[0]
+                df["DFT Ic"] = ppf.window_phasor(np.array(ic), np.array(df['Time']), 1, 1)[0]
 
-                v_dft_rms = ppf.instaLL_RMSVoltage(np.array(df['Time']),np.abs(va_dft),np.abs(vb_dft),np.abs(vc_dft))
+                df['RMSDFT_V'] = ppf.instaLL_RMSVoltage(np.array(df['Time']),np.abs(df["DFT Va"]),np.abs(df["DFT Vb"]),np.abs(df["DFT Vc"]))
 
-                i_dft_rms = ppf.insta_RMSCurrent(np.array(df['Time']),np.abs(ia_dft),np.abs(ib_dft),np.abs(ic_dft))
-                df['RMSDFT_V'] = v_dft_rms
-                df['RMSDFT_I'] = i_dft_rms
+                df['RMSDFT_I'] = ppf.insta_RMSCurrent(np.array(df['Time']),np.abs(df["DFT Ia"]),np.abs(df["DFT Ib"]),np.abs(df["DFT Ic"]))
+                # df['RMSDFT_V'] = v_dft_rms
+                # df['RMSDFT_I'] = i_dft_rms
                 
 
-                Z = ppf.impedance(va, vb, vc, ia, ib, ic)
-                df['Z(Impedance)'] = Z
+                df['Z(Impedance)'] = ppf.impedance(va, vb, vc, ia, ib, ic)
+                # df['Z(Impedance)'] = Z
 
-                Z_complex = ppf.complex_impedance(np.array(df['Time']),va,vb,vc,ia,ib,ic)
-                df['Complex_Impedance'] = Z_complex
+                df['Complex_Impedance'] = ppf.complex_impedance(np.array(df['Time']),va,vb,vc,ia,ib,ic)
+                # df['Complex_Impedance'] = Z_complex
 
                 
                 df['Positive sequence V'], df['Negative sequence V'], df['Zero sequence V'] = ppf.sequencetransform(
-                    df['Time'], va_dft, vb_dft, vc_dft)
+                    df['Time'], df['DFT Va'], df['DFT Vb'], df['DFT Vc'])
                 df['Positive sequence I'], df['Negative sequence I'], df['Zero sequence I'] = ppf.sequencetransform(
-                    df['Time'], ia_dft, ib_dft, ic_dft)
+                    df['Time'], df['DFT Ia'], df['DFT Ib'], df['DFT Ic'])
                 
-                fa = ppf.freq4mdftPhasor(va_dft, np.array(df['Time']),1)[0]
-                fb = ppf.freq4mdftPhasor(vb_dft, np.array(df['Time']),1)[0]
-                fc = ppf.freq4mdftPhasor(vc_dft, np.array(df['Time']),1)[0]
+                fa = ppf.freq4mdftPhasor(df['DFT Va'], np.array(df['Time']),1)[0]
+                fb = ppf.freq4mdftPhasor(df['DFT Vb'], np.array(df['Time']),1)[0]
+                fc = ppf.freq4mdftPhasor(df['DFT Vc'], np.array(df['Time']),1)[0]
 
                 fa[:np.argwhere(np.isnan(fa))[-1][0] + 1] = fa[np.argwhere(np.isnan(fa))[-1][0] + 1]
                 fb[:np.argwhere(np.isnan(fb))[-1][0] + 1] = fb[np.argwhere(np.isnan(fb))[-1][0] + 1]
@@ -389,6 +409,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                   "Didn't obtain correct number of values, please check your input lists")
         elif type(power_input[0]) == list:
             for _ in range(len(power_input)):
+                print(f"\n---------\nCalculations for set {_ + 1}\n---------\n")
                 try:
                     va, vb, vc = df[f'Va{power_input[_][0]}'], df[f'Vb{power_input[_][0]}'], df[
                         f'Vc{power_input[_][0]}']
@@ -397,40 +418,41 @@ class MainWindow(QtWidgets.QMainWindow):
 
                     df[f"Real power {_ + 1}"], df[f'Reactive power {_ + 1}'] = ppf.instant_power(va, vb, vc, ia, ib, ic)
                     
-                    va_dft = ppf.window_phasor(np.array(va), np.array(df['Time']), 1, 1)[0]
-                    vb_dft = ppf.window_phasor(np.array(vb), np.array(df['Time']), 1, 1)[0]
-                    vc_dft = ppf.window_phasor(np.array(vc), np.array(df['Time']), 1, 1)[0]
-                    ia_dft = ppf.window_phasor(np.array(ia), np.array(df['Time']), 1, 1)[0]
-                    ib_dft = ppf.window_phasor(np.array(ib), np.array(df['Time']), 1, 1)[0]
-                    ic_dft = ppf.window_phasor(np.array(ic), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Va {_ + 1}"] = ppf.window_phasor(np.array(va), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Vb {_ + 1}"] = ppf.window_phasor(np.array(vb), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Vc {_ + 1}"] = ppf.window_phasor(np.array(vc), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Ia {_ + 1}"] = ppf.window_phasor(np.array(ia), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Ib {_ + 1}"] = ppf.window_phasor(np.array(ib), np.array(df['Time']), 1, 1)[0]
+                    df[f"DFT Ic {_ + 1}"] = ppf.window_phasor(np.array(ic), np.array(df['Time']), 1, 1)[0]
 
-                    v_dft_rms = ppf.instaLL_RMSVoltage(np.array(df['Time']),np.abs(va_dft),np.abs(vb_dft),np.abs(vc_dft))
+                    # v_dft_rms = ppf.instaLL_RMSVoltage(np.array(df['Time']),np.abs(va_dft),np.abs(vb_dft),np.abs(vc_dft))
+                    df[f'RMSDFT_V {_ + 1}']= ppf.instaLL_RMSVoltage(np.array(df['Time']),np.abs(df[f"DFT Va {_ + 1}"]),np.abs(df[f"DFT Vb {_ + 1}"]),np.abs(df[f"DFT Vc {_ + 1}"]))
 
-                    i_dft_rms = ppf.insta_RMSCurrent(np.array(df['Time']),np.abs(ia_dft),np.abs(ib_dft),np.abs(ic_dft))
-                    df['RMSDFT_V'] = v_dft_rms
-                    df['RMSDFT_I'] = i_dft_rms
+                    # i_dft_rms = ppf.insta_RMSCurrent(np.array(df['Time']),np.abs(ia_dft),np.abs(ib_dft),np.abs(ic_dft))
+                    df[f'RMSDFT_I {_ + 1}'] = ppf.insta_RMSCurrent(np.array(df['Time']),np.abs(df[f"DFT Ia {_ + 1}"]),np.abs(df[f"DFT Ib {_ + 1}"]),np.abs(df[f"DFT Ic {_ + 1}"]))
+                    # df[f'RMSDFT_V {_ + 1}'] = v_dft_rms
+                    # df[f'RMSDFT_I {_ + 1}'] = i_dft_rms
 
                     # Z = ppf.impedance(np.array(df['Time']), va, vb, vc, ia, ib, ic)
-                    Z = ppf.impedance(va,vb,vc,ia,ib,ic)
-                    df['Z(Impedance)'] = Z
+                    df[f'Z(Impedance) {_ + 1}'] = ppf.impedance(va,vb,vc,ia,ib,ic)
+                    # df[f'Z(Impedance) {_ + 1}'] = Z
 
-                    Z_complex = ppf.complex_impedance(np.array(df['Time']),va,vb,vc,ia,ib,ic)
-                    df['Complex_Impedance'] = Z_complex
-
-                    df[f'']
+                    df[f'Complex_Impedance {_ + 1}'] = ppf.complex_impedance(np.array(df['Time']),va,vb,vc,ia,ib,ic)
+                    # df[f'Complex_Impedance {_ + 1}'] = Z_complex
+                    
 
                     df[f'Positive sequence V {_ + 1}'], df[f'Negative sequence V {_ + 1}'], df[f'Zero sequence V {_ + 1}'] = ppf.sequencetransform(df['Time'], va, vb, vc)
                     df[f'Positive sequence V {_ + 1}'], df[f'Negative sequence V {_ + 1}'], df[
                         f'Zero sequence V {_ + 1}'] = ppf.sequencetransform(
-                        df['Time'], va_dft, vb_dft, vc_dft)
+                        df['Time'],df[f"DFT Va {_ + 1}"],df[f"DFT Vb {_ + 1}"], df[f"DFT Vc {_ + 1}"] )
                     df[f'Positive sequence I {_ + 1}'], df[f'Negative sequence I {_ + 1}'], df[
                         f'Zero sequence I {_ + 1}'] = ppf.sequencetransform(
-                        df['Time'], ia_dft, ib_dft, ic_dft)
+                        df['Time'], df[f"DFT Ia {_ + 1}"], df[f"DFT Ib {_ + 1}"], df[f"DFT Ic {_ + 1}"])
                     
                                         
-                    fa = ppf.freq4mdftPhasor(va_dft, np.array(df['Time']),1)[0]
-                    fb = ppf.freq4mdftPhasor(vb_dft, np.array(df['Time']),1)[0]
-                    fc = ppf.freq4mdftPhasor(vc_dft, np.array(df['Time']),1)[0]
+                    fa = ppf.freq4mdftPhasor(df[f"DFT Va {_ + 1}"], np.array(df['Time']),1)[0]
+                    fb = ppf.freq4mdftPhasor(df[f"DFT Vb {_ + 1}"], np.array(df['Time']),1)[0]
+                    fc = ppf.freq4mdftPhasor(df[f"DFT Vc {_ + 1}"], np.array(df['Time']),1)[0]
 
                     # fa = ppf.freq4mdftPhasor(va_dft, np.array(df['time']), 1)
                     fa[:np.argwhere(np.isnan(fa))[-1][0] + 1] = fa[np.argwhere(np.isnan(fa))[-1][0] + 1]  # Replaces the rise cycle and Nan values to first Non Nan value.
@@ -639,6 +661,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 plot.addLegend(offset=(280,8))
                 plot.setMinimumSize(480,250)
                 plot.setMaximumSize(550,280)
+                plot.setBackground('w')
 
                 colors = ['r','y','b'] * 3
                 color_count = 0
@@ -658,6 +681,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 plot.addLegend(offset=(280,8))
                 plot.setMinimumSize(480,250)
                 plot.setMaximumSize(550,280)
+                plot.setBackground('w')
                 color_count = 0
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("I") and item.endswith(str(val+1))]:
                     pen = pg.mkPen(color=colors[color_count], width=1.5)
@@ -1201,7 +1225,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("RMS_voltage")]:
 
                     self.q, self.z1, self.threshold = segmentation_trendfilter(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'],
-                                                self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])
+                                                (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column])
                         
                     self.super_q[file] = [val for val in self.q]
                     signal_ = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
@@ -1209,7 +1233,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")                
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
@@ -1227,8 +1251,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     ax[1].grid(True)
                     
                     ax[1].set_xlabel("Time (s)")
-                    ax[1].set_ylabel("Voltage (V)")
-                    ax[0].set_ylabel("Voltage (V)")
+                    ax[1].set_ylabel("Voltage (kV)")
+                    ax[0].set_ylabel("Voltage (kV)")
                     
 
         # plt.savefig('Segmentation.png')
@@ -1248,7 +1272,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")                
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
@@ -1285,7 +1309,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")                
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
@@ -1329,7 +1353,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.q, self.z1 = manual_segmentation_trendfilter(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'],
                                        self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column],self.man_threshold)
 
-                    signal_ = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                    signal_ = (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column]
                     self.super_q[file] = self.q
                     self.max_val[0] = max(signal_) if self.max_val[0] < max(signal_) else self.max_val[0]
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
@@ -1528,7 +1552,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")
 
@@ -1566,7 +1590,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")                
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
@@ -1745,7 +1769,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
                     ax[0].legend()
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], [self.threshold]*len(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']))
@@ -1781,7 +1805,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
 
 
-                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                    ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
                     ax[0].legend()
                     ax[0].title.set_text("Signal Plot")                
                     ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
@@ -1931,14 +1955,92 @@ class MainWindow(QtWidgets.QMainWindow):
 
             plt.savefig('Segmentation_Frequency.png')
 
+        if self.CB_voltage_rms_2.isChecked():
+                
+                for file in self.file_names:
+                    name = file[:-4]
+                    for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("RMS_voltage")]:
+    
+                        self.q, self.z1, self.threshold = segmentation_trendfilter(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'],
+                                                    self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])
+                            
+                        self.super_q[file] = [val for val in self.q]
+                        signal_ = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                        self.max_val[0] = max(signal_) if self.max_val[0] < max(signal_) else self.max_val[0]
+                        self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
+    
+    
+                        ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column], label = name)
+                        ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
+                        ax[0].legend()
+                        ax[0].title.set_text("Signal Plot")
+                        
+                        ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], [self.threshold]*len(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']))
+                        ax[1].legend()
+                        ax[1].title.set_text("Derivative Plot")
+    
+                        for i in range(len(self.segments)):
+                                                
+                            ax[0].plot([self.segments[i]]*3,[self.min_val, 0, self.max_val[0]])
+                            ax[1].plot([self.segments[i]]*3,[0,0, self.max_val[1]])
+                        
+                        ax[0].grid(True)
+                        ax[1].grid(True)
+                        ax[1].set_xlabel("Time (s)")
+                        ax[1].set_ylabel("Voltage (V)")
+                        ax[0].set_ylabel("Voltage (V)")
+                        
+
+                plt.savefig('Segmentation_Voltage.png')
 
 
+        if self.CB_current_rms_2.isChecked():
+                
+                for file in self.file_names:
+                    name = file[:-4]
+                    for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("RMS_current")]:
+    
+                        self.q, self.z1, self.threshold = segmentation_trendfilter(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'],
+                                                    self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])
+                            
+                        self.super_q[file] = [val for val in self.q]
+                        signal_ = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                        self.max_val[0] = max(signal_) if self.max_val[0] < max(signal_) else self.max_val[0]
+                        self.max_val[1] = max(self.z1) if self.max_val[1] < max(self.z1) else self.max_val[1]
+    
+    
+                        ax[0].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column], label = name)
+                        ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], self.z1, label = name)
+                        ax[0].legend()
+                        ax[0].title.set_text("Signal Plot")
+                        
+                        ax[1].plot(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x'], [self.threshold]*len(self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']))
+                        ax[1].legend()
+                        ax[1].title.set_text("Derivative Plot")
+    
+                        for i in range(len(self.segments)):
+                                                
+                            ax[0].plot([self.segments[i]]*3,[self.min_val, 0, self.max_val[0]])
+                            ax[1].plot([self.segments[i]]*3,[0,0, self.max_val[1]])
+                        
+                        ax[0].grid(True)
+                        ax[1].grid(True)
+                        ax[1].set_xlabel("Time (s)")
+                        ax[1].set_ylabel("Current (A)")
+                        ax[0].set_ylabel("Current (A)")
+                        
+
+                plt.savefig('Segmentation_Current.png')
+
+            
     ### Get the waveforms from the individual segments
     
         
     def get_segmented_plots(self): 
 
-        from collections import defaultdict   
+        # num_subplots = 0
+        # pdf.add_page()
+        # from collections import defaultdict   
         
         """I need to extract the waveforms from each of the segments and plot them"""
         """self.segments contains the coordinates of the segments (segment indices) and self.all_files1 contains the data"""
@@ -1961,9 +2063,8 @@ class MainWindow(QtWidgets.QMainWindow):
         segmented_after_negative = defaultdict(list)
         segmented_after_zero = defaultdict(list)
 
-
-
-        from scipy import stats
+        
+        
         # slopes = defaultdict(list) ##To store slopes of data
         # trends = defaultdict(list) ##To store trends of data
         slopes = list()
@@ -1981,21 +2082,28 @@ class MainWindow(QtWidgets.QMainWindow):
                             
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("RMS_voltage")]:
                     time_signal = self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']
-                    data_signal = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                    data_signal = (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column]
 
-                    # print(self.all_files1.keys())
-                
+                         
                     ###Extracting data and time for first segment
-                    time_01 = time_signal[time_signal <= self.segments[0]]
+                    time_01 = time_signal[time_signal <= self.segments[0]] ##time data 
                     data_01 = data_signal[time_signal <= self.segments[0]]
                     
+                    # print("Time before: ", time_01)
+                    # print("Type: ", type(time_01[0]))
                     segmented_before[name].append((time_01, data_01))
+                    # print("Length: ",len(segmented_before))
+                    # print("time: ", segmented_before.items())
+
+                    
 
                     ###Extracting data and time for last segment
                     time_last = time_signal[time_signal >= self.segments[-1]]
                     data_last = data_signal[time_signal >= self.segments[-1]]
                     
                     segmented_after[name].append((time_last, data_last))
+
+                    
 
                     ###Extracting data and time in between the segments
 
@@ -2013,7 +2121,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
                         
                         segmented_data[i].append((t, d))
-###components of voltage/current
                 
                     
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("Positive sequence V")]:
@@ -2022,13 +2129,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
                         time_before_positive = time_signal[time_signal <= self.segments[0]]
                         data_before_positive = data_signal[time_signal <= self.segments[0]]
+                        # print("Positive before" ,data_before_positive)
 
+                        
                         segmented_before_positive[name].append((time_before_positive, data_before_positive)) ##before first segment postive
-
+                    
+                        print("len: ", len(segmented_before_positive.items()))
                         time_after_positive = time_signal[time_signal >= self.segments[-1]]
                         data_after_positive = data_signal[time_signal >= self.segments[-1]]
 
-                        segmented_after_positive[name].append((time_after_positive, data_after_positive))  ##afterr last segment positive
+                        segmented_after_positive[name].append((time_after_positive, data_after_positive))  ##after last segment positive
 
                         for i in range(len(self.segments)-1):
                             start_index = self.segments[i]
@@ -2047,6 +2157,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                         time_before_negative = time_signal[time_signal <= self.segments[0]]
                         data_before_negative = data_signal[time_signal <= self.segments[0]]
+                        
 
                         segmented_before_negative[name].append((time_before_negative, data_before_negative))
 
@@ -2072,8 +2183,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
                         time_before_zero = time_signal[time_signal <= self.segments[0]]
                         data_before_zero = data_signal[time_signal <= self.segments[0]]
+                        # print("Zero before: ", data_before_zero)
 
                         segmented_before_zero[name].append((time_before_zero, data_before_zero))
+                        
 
                         time_after_zero = time_signal[time_signal >= self.segments[-1]]
                         data_after_zero = data_signal[time_signal >= self.segments[-1]]
@@ -2093,7 +2206,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 
 
-            fig, axs = plt.subplots(len(self.segments) + 1, 1, figsize = (10,8))
+            fig, axs = plt.subplots(len(self.segments) + 1, 1, figsize = (12,12))
+
             # figsize = (10,10)
             
             # fig, axs = plt.subplots(2*(len(self.segments) + 1), 1, figsize=(10, 10))
@@ -2103,34 +2217,64 @@ class MainWindow(QtWidgets.QMainWindow):
                     
             # for k in range(0, 2*(len(self.segments) + 1), 2):
             for k in range(len(self.segments) + 1):
+                # num_subplots += 1
+                # if num_subplots % 3 == 0:
+                #     pdf.add_page()
             # for k in range(2*(len(self.segments) + 1)):
 
                 if k == 0:   ##Before first segment data
                     # table_data = [['', '', ''],['Filename', 'Slope', 'Trend']]
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
                     
                     # table_data_final = []
                     # file_ind = 0
                     voltage_positive = defaultdict(list)
                     voltage_negative = defaultdict(list)
                     voltage_zero = defaultdict(list)
+                    # start_time_list = []
+                    # end_time_list = []
+                    
+
+                    # common_start = max(start_time_list)
+                    # common_end = min(end_time_list)
+
+                    
                     for name, segments in segmented_before.items():
                         print(f"*********************** File --> {name} *************************")
                         slopes = list()
                         flag = False
+                        
+
                         for t,d in segments:
                             if not flag:
                                 flag = True
-                                # fig.add_trace(go.Scatter(x = t, y = d, name = name), row = k+1, col = 1)
-                                axs[k].plot(t,d,label = name)
-                                axs[k].legend()
-                                
-                                                                                   
-                            else:
-                                axs[k].plot(t,d)
-                                
+                                # try:
+                                #     start_time_list.append(t.iloc[0])
+                                #     end_time_list.append(t.iloc[-1])
+                                # except:
+                                #     print("Empty lists of time")
+                                #     pass
 
+                                # fig.add_trace(go.Scatter(x = t, y = d, name = name), row = k+1, col = 1)
+                                # num_subplots += 1
+                                # if num_subplots % 3 == 0:
+                                #     pdf.add_page()
                                 
+                                axs[k].plot(t,d/1000,label = name)
+                                axs[k].legend()
+                                # plt.savefig('this_plot.png')
+                                # pdf.image('this_plot.png', w=200, h=200)
+                                                                                                                                                  
+                            else:
+                                # num_subplots += 1
+                                # if num_subplots % 3 == 0:
+                                #     pdf.add_page()
+
+                                axs[k].plot(t,d/1000)
+                                # plt.savefig('this_plot.png')
+                                # pdf.image('this_plot.png', w=200, h=200)
+                            
+                                                         
                                 # fig.add_trace(go.Scatter(x = t, y = d, name = name), row = 1, col = 1)
 
                             axs[k].tick_params(axis = 'x', which = 'major', labelsize = 8)
@@ -2138,16 +2282,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
                             axs[k].grid(True)
                                 # axs[k].set_xlabel("Time (s)")
-                            axs[k].set_ylabel("Voltage (V)")
+                            axs[k].set_ylabel("Voltage (kV)")
 
                             # print("data brfore 0.4:", d)
                             try:
                                 slope, intercept, r_value, p_value, std_err = stats.linregress(t,d/(max(d)-min(d)))
                                 slope = round(slope, 5)
                                 slopes.append(slope)
+                                ##Finding the common time for each of the data for correlation in each of the region
                                 
-                                # axs[k].plot(t, slopes*t + intercept)
-
+                                
                                 for val in slopes:
                                     if val > 0:
 
@@ -2157,15 +2301,19 @@ class MainWindow(QtWidgets.QMainWindow):
                                         trend = "Constant"
                                     else:
                                         trend = "Decreasing"
+                                                               
+                                
+                                # print(f'Before first segment: filename:{name}, slope:{slope}, trend:{trend}, correlation:{corr_result}')
 
                                 # for name_p, data in segmented_before_positive.items(): ##components positive extraction and calculation
                                 try:
                                     # voltage_positive = list()
 
                                     for t,d in segmented_before_positive[name]:
-                                        # print("D:", type(d))
+                                        
                                         Vp = abs(d)
                                         Vp = np.median(Vp)
+                                        
 
                                     voltage_positive[name].append(Vp)
 
@@ -2183,6 +2331,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                     for t,d in segmented_before_negative[name]:
                                         Vn = abs(d)
                                         Vn = np.median(Vn)
+                                        print("Voltage neg: ", Vn)
                                                                     
                                     voltage_negative[name].append(Vn)
                                     print(f'Negative sequence voltage: {name}, {Vn}')
@@ -2198,6 +2347,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                     for t,d in segmented_before_zero[name]:
                                         Vz = abs(d)
                                         Vz = np.median(Vz)
+                                        print("Voltage zero: ", Vz)
                                         # self.correlation_plot.plot(t,abs(d))
 
                                     voltage_zero[name].append(Vz)
@@ -2208,11 +2358,12 @@ class MainWindow(QtWidgets.QMainWindow):
                                     Vz = "N/A"
                                     print(f'Zero sequence voltage: {name}, {Vz}')
 
-                                percent_zero_unbalance = Vz/Vp if Vp!= float('nan') else "N/A"
+                                percent_zero_unbalance = Vz/Vp *100 if Vp!= float('nan') else "N/A"
                                 percent_zero_unbalance = round(percent_zero_unbalance, 3)
-                                percent_negative_unbalance = Vn/Vp if Vp!= float('nan') else "N/A"
+                                percent_negative_unbalance = Vn/Vp *100 if Vp!= float('nan') else "N/A"
                                 percent_negative_unbalance = round(percent_negative_unbalance, 3)
-                                
+
+                                                    
 
                             except:
                                 slope = "N/A"
@@ -2220,13 +2371,12 @@ class MainWindow(QtWidgets.QMainWindow):
                                 percent_negative_unbalance = "N/A"
                                 percent_zero_unbalance = "N/A"
                                 
+                                
+                                
                                 print(f'Before first segment: filename:{name}, slope:{slope}, trend:{trend}, Negative Unbalance:{percent_negative_unbalance}, Zero Unbalance:{percent_zero_unbalance}' )
 
-                            # print(f'Before first segment: filename:{name}, slope:{slope}, trend:{trend}')
-                            # table_data.append([name, slope, trend])
-
-                        
-                        print(f'Before first segment: filename:{name}, slope:{slope}, trend:{trend}, Negative Unbalance:{percent_negative_unbalance}, Zero Unbalance:{percent_zero_unbalance}' )
+                      
+                        #     
                         table_data.append([name, slope, trend, percent_negative_unbalance, percent_zero_unbalance])
 
                         #     # table_data_final.append([name, slope, trend])
@@ -2234,39 +2384,66 @@ class MainWindow(QtWidgets.QMainWindow):
                     # table_data.pop(0)
                     
                     
+                    
                     # table = axs[k].table(cellText=table_data[1:], colLabels=table_data[0], cellLoc='center', loc = 'bottom') ###bbox = [0.2,0.68,0.89,0.88]
+                    
+                    
                     
                     table = axs[k].table(cellText=table_data[1:],colLabels=table_data[0], cellLoc='center', bbox=[0, -1, 1 , 0.6], edges= 'closed')
                     table.auto_set_font_size(False)                                   ###[xmin,ymin,width, height]
                     table.set_fontsize(8)
-                    table.scale(2,2)
+                    table.scale(2,6)
+
+
+
                     # axs[k].autoscale()
                     # # plt.subplots_adjust(right = 0.35)
-                    plt.subplots_adjust(left = 0.2, bottom = 0.35)
-
+                    # plt.subplots_adjust(left = 0.2, bottom = 0.35)
+                    
                     # axs[k].set_xticks([])
                     # axs[k].tick_params(axis = 'x', direction = 'in', width=3, length = 10)
 
                     # file_ind += 1            
-                
-
+               
                 elif k == len(self.segments):  ##After last segment data
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
                     # table_data_final = []
                     voltage_positive = defaultdict(list)
                     voltage_negative = defaultdict(list)
                     voltage_zero = defaultdict(list)
+                    # start_time_list = []
+                    # end_time_list = []
                     for name, segments in segmented_after.items():
                         flag = False
                         for t,d in segments:
                             if not flag:
+                                # try:
+                                #     start_time_list.append(t.iloc[0])
+                                #     end_time_list.append(t.iloc[-1])
+                                # except:
+                                #     print("Empty lists of time")
+                                #     pass
+
                                 flag = True
+
+                                # num_subplots += 1
+                                # if num_subplots % 3 == 0:
+                                #     pdf.add_page()
                                 # fig.add_trace(go.Scatter(x = t, y = d, name = name), row = k+1, col = 1)
-                                axs[k].plot(t,d,label = name)
+                                axs[k].plot(t,d/1000,label = name)
                                 axs[k].legend()
+                                # plt.savefig('this_plot.png')
+                                # pdf.image('this_plot.png', w=200, h=200)
                                 
                             else:
-                                axs[k].plot(t,d)
+                                # num_subplots += 1
+                                # if num_subplots % 3 == 0:
+                                #     pdf.add_page()
+
+
+                                axs[k].plot(t,d/1000)
+                                # plt.savefig('this_plot.png')
+                                # pdf.image('this_plot.png', w=200, h=200)
                                 # fig.add_trace(go.Scatter(x = t, y = d), row = k+1, col = 1)
                             
                             axs[k].tick_params(axis = 'x', which = 'major', labelsize = 8)
@@ -2275,13 +2452,13 @@ class MainWindow(QtWidgets.QMainWindow):
                             axs[k].grid(True)
                             axs[k].set_xlabel("Time (s)", fontsize = 8)
                             axs[k].xaxis.labelpad = -7
-                            axs[k].set_ylabel("Voltage (V)")
+                            axs[k].set_ylabel("Voltage (kV)")
 
                             try:
                                 slope, intercept, r_value, p_value, std_err = stats.linregress(t,d/(max(d)-min(d)))
                                 slope = round(slope, 5)
                                 slopes.append(slope)
-                                # corr_coeff = stats.pearsonr(d)
+                                
                                 # print(corr_coeff)
 
                                
@@ -2339,46 +2516,81 @@ class MainWindow(QtWidgets.QMainWindow):
                                     Vz = "N/A"
                                     print(f'Zero sequence voltage: {name}, {Vz}')
 
-                                percent_zero_unbalance = Vz/Vp if Vp!= float('nan') else "N/A"
+                                percent_zero_unbalance = Vz/Vp *100 if Vp!= float('nan') else "N/A"
                                 percent_zero_unbalance = round(percent_zero_unbalance, 3)
-                                percent_negative_unbalance = Vn/Vp if Vp!= float('nan') else "N/A"
+                                percent_negative_unbalance = Vn/Vp *100 if Vp!= float('nan') else "N/A"
                                 percent_negative_unbalance = round(percent_negative_unbalance, 3)
-                                
+
+                                    
                             
                             except ValueError as err:
                                 slope = "N/A"
                                 trend = "N/A"
                                 percent_negative_unbalance = "N/A"
                                 percent_zero_unbalance = "N/A"
+                                
                                 print(f'After last segment: filename:{name}, slope:{slope}, trend:{trend}')
-
-                        
+                                                  
                         print(f'After last segment: filename:{name}, slope:{slope}, trend:{trend}, %Negative Unbalance:{percent_negative_unbalance}, %Zero Unbalance:{percent_zero_unbalance}' )
                         table_data.append([name, slope, trend, percent_negative_unbalance, percent_zero_unbalance])
                     # table_data_final.append([name, slope, trend])
                     
+
+                    # try:
+                    #     common_start = max(start_time_list)
+                    #     common_end = min(end_time_list)
+                    #     print("Common start: ", common_start)
+                    #     print("Common end: ", common_end)
+
+                    #     common_time = []
+                    #     common_data = []
+                        
+                    #     for name, segments in segmented_after.items():
+                    #         print(f"*********************** File --> {name} *************************")
+                    #         slopes = list()
+                    #         flag = False
+                            
+                    #         for t,d in segments:
+                    #             if not flag:
+                    #                 flag = True
+                    #                 common_time.append(t[(t >= common_start) & (t <= common_end)])
+                    #                 common_data.append(d[(t >= common_start) & (t <= common_end)])
+                        
+                    #     print("Common time: ", common_time)
+
+                    #     # corr_result = stats.pearsonr(common_data[0][:min(len(common_data[0]),len(common_data[1]))],common_data[1][:min(len(common_data[0]),len(common_data[1]))])
+                    #     # corr_result = np.round(corr_result, 4)
+                    #     corr = signal.correlate(common_data[0], common_data[1])
+                    #     corr_lags = signal.correlation_lags(len(common_data[0]), len(common_data[1]))
+                        
+                    #     corr/= np.max(corr)
+
+                    #     axs[k + 1].plot(corr_lags, corr)  ##xmin, ymin, ##width ##height
+                    #     print("Correlation: ", corr)
+
+                    # except:
+                    #     corr = "N/A"
+                    #     print("Correlation: ", corr)
                                         
                     
                     # table_data.pop(0)
                     table = axs[k].table(cellText=table_data[1:], colLabels=table_data[0], cellLoc='center', bbox = [0, -1, 1 , 0.6], edges= 'closed')
                     table.auto_set_font_size(False)
                     table.set_fontsize(8)
-                    table.scale(2,2)
+                    table.scale(2,6)
+                    
 
                     # axs[k].set_xticks([])
-                    # axs[k].tick_params(axis = 'x', direction = 'in', width=3, length = 10)
-                                   
-                    # table_data[0].visible(False)
-                    # plt.subplots_adjust(right= 0.5)
-                    # axs[k].autoscale()
-                    # plt.subplots_adjust(hspace = 1)
-                    # left=0.2, bottom=0.5
+                    
                     plt.subplots_adjust(left = 0.2, bottom = 0.35)
+                    # plt.savefig(r"C:\Users\Admin\OneDrive\Desktop\segmented_voltage_after.png")
+                    
+                    # plt.savefig('segmented_voltage_after.png')
 
                      
                 else:  ##In between segments data
                     
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
                     # table_data_final = []
                     # for name, segments in segmented_data.items():
                     label_set = set()
@@ -2387,26 +2599,52 @@ class MainWindow(QtWidgets.QMainWindow):
                     voltage_positive = defaultdict(list)
                     voltage_negative = defaultdict(list)
                     voltage_zero = defaultdict(list)
+                    start_time_list = []
+                    end_time_list = []
+                    
                     
                     for t,d in segmented_data[k-1]:
+                        corr_result = None
+                        
                     # for t, d in segmented_data[k//2 - 2]:
                         name = name_list[i]
+                        
+                        try:
+                            start_time_list.append(t.iloc[0])
+                            end_time_list.append(t.iloc[-1])
+
+                        except:
+                            print("Empty lists of time")
+                            pass
+                        # name = [name_list] * 2
                         # print(name)
                     
                         if name not in label_set:
                             label_set.add(name)
                             # fig.add_trace(go.Scatter(x = t, y = d, name = name), row = k, col = 1)
 
-                            axs[k].plot(t,d, label = name) ##axs[0].plot(t,d)  
+                            # num_subplots += 1
+                            # if num_subplots % 3 == 0:
+                            #     pdf.add_page()
+
+                            axs[k].plot(t,d/1000, label = name) ##axs[0].plot(t,d)  
                             axs[k].legend()
+                            # plt.savefig('this_plot.png')
+                            # pdf.image('this_plot.png', w=200, h=200)
                         else:
-                            axs[k].plot(t,d)
+                            # num_subplots += 1
+                            # if num_subplots % 3 == 0:
+                            #     pdf.add_page()
+
+                            axs[k].plot(t,d/1000)
+                            # plt.savefig('this_plot.png')
+                            # pdf.image('this_plot.png', w=200, h=200)
                             # fig.add_trace(go.Scatter(x = t, y = d), row = k, col = 1)
             
                         axs[k].tick_params(axis = 'x', which = 'major', labelsize = 8)
                         axs[k].set_title(f'Segmented waveforms from {np.round(self.segments[k-1], 3)}s to {np.round(self.segments[k], 3)}s')
                         axs[k].grid(True)
-                        axs[k].set_ylabel("Voltage (V)")
+                        axs[k].set_ylabel("Voltage (kV)")
 
                         i = i+1
 
@@ -2414,9 +2652,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             slope, intercept, r_value, p_value, std_err = stats.linregress(t,d/(max(d)-min(d)))
                             slope = round(slope, 5)
                             slopes.append(slope)
-                            # corr_coeff = stats.pearsonr(d)
-                            # print(corr_coeff)
-                            # axs[k].plot(t, slopes*t + intercept)
+                            
 
                             for val in slopes:
                                 if val > 0:
@@ -2427,6 +2663,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                     trend = "Constant"
                                 else:
                                     trend = "Decreasing"
+
+                            
 
                             for t, d in segmented_data_positive[k-1]: ##in between segments ka positive component of voltage
                             # for t,d in segmented_data_positive[k//2 - 2]:
@@ -2472,45 +2710,108 @@ class MainWindow(QtWidgets.QMainWindow):
                             
                                     Vz = "N/A"
                                     print(f'Zero sequence voltage: {name}, {Vz}')
+
                             
-                            percent_negative_unbalance = Vn/Vp if Vp!= float('nan') else "N/A"
+                            percent_negative_unbalance = Vn/Vp *100 if Vp!= float('nan') else "N/A"
                             percent_negative_unbalance = round(percent_negative_unbalance, 3)
-                            percent_zero_unbalance = Vz/Vp if Vp!= float('nan') else "N/A"
+                            percent_zero_unbalance = Vz/Vp *100 if Vp!= float('nan') else "N/A"
                             percent_zero_unbalance = round(percent_zero_unbalance, 3)
 
+                            try:
+                                common_start = max(start_time_list)
+                                common_end = min(end_time_list)
+                                print("Common start: ", common_start)
+                                print("Common end: ", common_end)
+
+                                common_time = []
+                                common_data = []
+
+                                for t, d in segmented_data[k-1]:
+                                    common_time.append(t[(t >= common_start) & (t <= common_end)])
+                                    common_data.append(d[(t >= common_start) & (t <= common_end)])
+
+                                # with open('common_data_corr.txt') as out:
+                                #     pprint(common_data[1], stream = out)
+                                
+                                
+                                print("Common data 1: ", common_data[0][:min(len(common_data[0]),len(common_data[1]))])
+                                print("Common data 2: ", common_data[1][:min(len(common_data[0]),len(common_data[1]))])
+                                
+                                if corr_result == None:
+                                    corr_result = stats.pearsonr(common_data[0][:min(len(common_data[0]),len(common_data[1]))],common_data[1][:min(len(common_data[0]),len(common_data[1]))])[0]
+                                    corr_result = np.round(corr_result, 4)
+
+                                print("Correlation: ", corr_result)
+
+                            except:
+                                
+                                corr_result = "N/A"
+                                print("Correlation: ", corr_result)
+                   
                         except:
                             slope = "N/A"
                             trend = "N/A"
                             percent_negative_unbalance = "N/A"
                             percent_zero_unbalance = "N/A"
+                            corr_result = "N/A"
+                             
                             print(f'In between segments: filename:{name}, slope:{slope}, trend:{trend}, Negative Unbalance:{percent_negative_unbalance}, Zero Unbalance:{percent_zero_unbalance}')
-
-                        
                         
                         print(f'In between segments: filename:{name}, slope:{slope}, trend:{trend}, Negative Unbalance:{percent_negative_unbalance}, Zero Unbalance:{percent_zero_unbalance}' )
                         table_data.append([name, slope, trend, percent_negative_unbalance, percent_zero_unbalance])
 
+                    # try:
+                    #     common_start = max(start_time_list)
+                    #     common_end = min(end_time_list)
+                    #     print("Common start: ", common_start)
+                    #     print("Common end: ", common_end)
+
+                    #     common_time = []
+                    #     common_data = []
+
+                    #     for t, d in segmented_data[k-1]:
+                    #         common_time.append(t[(t >= common_start) & (t <= common_end)])
+                    #         common_data.append(d[(t >= common_start) & (t <= common_end)])
+
+                    #     # with open('common_data_corr.txt') as out:
+                    #     #     pprint(common_data[1], stream = out)
+                        
+                        
+                    #     # print("Common data 1: ", common_data[0][:min(len(common_data[0]),len(common_data[1]))])
+                    #     # print("Common data 2: ",common_data[1][:min(len(common_data[0]),len(common_data[1]))])
+                    #     corr_result = stats.pearsonr(common_data[0][:min(len(common_data[0]),len(common_data[1]))],common_data[1][:min(len(common_data[0]),len(common_data[1]))])[0]
+                    #     corr_result = np.round(corr_result, 4)
+
+                    #     print("Correlation: ", corr_result)
+
+                    # except:
+                        
+                    #     corr_result = "N/A"
+                    #     print("Correlation: ", corr_result)
+
+                    # table_data.append([name, slope, trend, percent_negative_unbalance, percent_zero_unbalance, corr_result])
                     
-                    # print("KK", k)
-                    # table_data.pop(0)
-                    # print("Table data:", table_data)
-                    table = axs[k].table(cellText=table_data[1:],colLabels=table_data[0], cellLoc='center',bbox=[0, -1, 1 , 0.6], edges= 'closed')
+                    
+
+                    print("Table data: ", table_data[1:])
+
+                    table = axs[k].table(cellText=table_data[1:],colLabels=table_data[0], cellLoc='center',bbox= [0, -1, 1 , 0.6], edges= 'closed')
                     table.auto_set_font_size(False)
                     table.set_fontsize(8)
-                    table.scale(2,2)
+                    table.scale(2,6)
+                    plt.figtext(0,0, f"Correlation in these segments is: {corr_result}")
+
                     # axs[k].set_xticks([])
-                    # axs[k].tick_params(axis = 'x', direction = 'in', width=3, length = 10)
-                    # plt.subplots_adjust(right = 0.5)
-                    # axs[k].autoscale()
-                    # # plt.subplots_adjust(hspace = 1)
+                    
                     plt.subplots_adjust(left = 0.2, bottom = 0.35)
-                   
-                                
+
+           
                                             
             plt.tight_layout()
-        
-                
-            plt.savefig('segmented_plots_voltage.png')
+                    
+            plt.savefig('segmented_plots_voltage.png', dpi = 200, bbox_inches = 'tight') ##Plots and converted into image complete (before, between & after)
+
+
             # pio.write_image(fig, 'segmented_plots_voltage.png')
 
 
@@ -2523,7 +2824,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("RMS_current")]:
                     time_signal = self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']
-                    data_signal = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                    data_signal = (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column]
 
                     # print(self.all_files1.keys())
                 
@@ -2633,14 +2934,14 @@ class MainWindow(QtWidgets.QMainWindow):
                             segmented_data_zero[i].append((t, d))
 
 
-            fig, axs = plt.subplots(len(self.segments) + 1, 1, figsize=(10, 10))
+            fig, axs = plt.subplots(len(self.segments) + 1, 1, figsize=(10, 12))
 
             # for k in range(0, 2*(len(self.segments) + 1), 2):
             for k in range(len(self.segments) + 1):
                         
                 if k == 0:   ##Before first segment data
-                    # table_data = [['', '', ''],['Filename', 'Slope', 'Trend']]
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
                     current_positive = defaultdict(list)
                     current_negative = defaultdict(list)
                     current_zero = defaultdict(list)
@@ -2653,7 +2954,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 flag = True
                                 axs[k].plot(t,d,label = name)
                                 axs[k].legend()
-                                
+                               
                                                     
                             else:
                                 axs[k].plot(t,d)
@@ -2731,9 +3032,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                     Iz = "N/A"
                                     print(f'Zero sequence current: {name}, {Iz}')
 
-                                percent_zero_unbalance = Iz/Ip if Ip!= float('nan') else "N/A"
+                                percent_zero_unbalance = Iz/Ip *100 if Ip!= float('nan') else "N/A"
                                 percent_zero_unbalance = round(percent_zero_unbalance, 3)
-                                percent_negative_unbalance = In/Ip if Ip!= float('nan') else "N/A"
+                                percent_negative_unbalance = In/Ip *100 if Ip!= float('nan') else "N/A"
                                 percent_negative_unbalance = round(percent_negative_unbalance, 3)
                             
 
@@ -2760,7 +3061,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     table = axs[k].table(cellText=table_data[1:],colLabels=table_data[0], cellLoc='center', bbox=[0, -1, 1 , 0.6], edges= 'closed')
                     table.auto_set_font_size(False)
                     table.set_fontsize(8)
-                    table.scale(2,2)
+                    table.scale(2,6)
                     # axs[k].autoscale()
                     # # plt.subplots_adjust(right = 0.35)
                     plt.subplots_adjust(left = 0.2, bottom = 0.35)
@@ -2787,7 +3088,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 
 
                 elif k == len(self.segments):  ##After last segment data
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
                     current_positive = defaultdict(list)
                     current_negative = defaultdict(list)
                     current_zero = defaultdict(list)
@@ -2866,9 +3167,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                     Iz = "N/A"
                                     print(f'Zero sequence current: {name}, {Vz}')
 
-                                percent_zero_unbalance = Iz/Ip if Ip!= float('nan') else "N/A"
+                                percent_zero_unbalance = Iz/Ip *100 if Ip!= float('nan') else "N/A"
                                 percent_zero_unbalance = round(percent_zero_unbalance, 3)
-                                percent_negative_unbalance = In/Ip if Ip!= float('nan') else "N/A"
+                                percent_negative_unbalance = In/Ip *100 if Ip!= float('nan') else "N/A"
                                 percent_negative_unbalance = round(percent_negative_unbalance, 3)
                                 
                             
@@ -2911,7 +3212,7 @@ class MainWindow(QtWidgets.QMainWindow):
                      
                 else:  ##In between segments data
                     
-                    table_data = [['Filename', 'Slope', 'Trend', 'Negative unbalance', 'Zero Unbalance']]
+                    table_data = [['Filename', 'Slope', 'Trend', '%Neg Seq Unbal', '%Zero Seq Unbal']]
 
                     # table_data_final = []
                     # for name, segments in segmented_data.items():
@@ -3003,9 +3304,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                     Iz = "N/A"
                                     print(f'Zero sequence current: {name}, {Iz}')
                             
-                            percent_negative_unbalance = In/Ip if Ip!= float('nan') else "N/A"
+                            percent_negative_unbalance = In/Ip * 100 if Ip!= float('nan') else "N/A"
                             percent_negative_unbalance = round(percent_negative_unbalance, 3)
-                            percent_zero_unbalance = Iz/Ip if Ip!= float('nan') else "N/A"
+                            percent_zero_unbalance = Iz/Ip * 100 if Ip!= float('nan') else "N/A"
                             percent_zero_unbalance = round(percent_zero_unbalance, 3)
 
                         except:
@@ -3026,7 +3327,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     # print("Table data:", table_data)
                     table = axs[k].table(cellText=table_data[1:],colLabels=table_data[0], cellLoc='center',bbox=[0, -1, 1 , 0.6], edges= 'closed')
                     table.auto_set_font_size(False)
-                    table.set_fontsize(10)
+                    table.set_fontsize(8)
                     table.scale(2,2)
                     # axs[k].set_xticks([])
                     # plt.subplots_adjust(right = 0.5)
@@ -3048,7 +3349,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             
                 for column in [item for item in self.all_files1[file]['data'].keys() if item.startswith("Frequency F_avg")]:
                     time_signal = self.all_files1[file]['data']["Time"] + self.all_files1[file]['shift_values']['x']
-                    data_signal = self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column]
+                    data_signal = (self.all_files1[file]['data'][column] + self.all_files1[file]['shift_values'][column])*self.all_files1[file]['scale_values'][column]
 
                     # print(self.all_files1.keys())
                 
@@ -3069,8 +3370,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     for i in range(len(self.segments)-1):
                         start_index = self.segments[i]
                         end_index = self.segments[i+1]
-                        print(start_index)
-                        print(end_index)
+                        # print(start_index)
+                        # print(end_index)
 
                         t = time_signal[(time_signal>=start_index) & (time_signal<=end_index)]
                         d = data_signal[(time_signal>=start_index) & (time_signal<=end_index)]
@@ -3139,7 +3440,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         table.set_fontsize(8)
                         table.scale(2,2)
                         # axs[k].set_xticks([])
-                        plt.subplots_adjust(left = 0.2, bottom = 0.2)
+                        plt.subplots_adjust(left = 0.2, bottom = 0.35)
 
                            
                 elif k == len(self.segments):
@@ -3193,7 +3494,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         table.set_fontsize(8)
                         table.scale(2,2)
                         # axs[k].set_xticks([])
-                        plt.subplots_adjust(left = 0.2, bottom = 0.2)
+                        plt.subplots_adjust(left = 0.2, bottom = 0.35)
 
                 else:
 
@@ -3250,12 +3551,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     table.set_fontsize(8)
                     table.scale(2,2)
                     # axs[k].set_xticks([])
-                    plt.subplots_adjust(left = 0.2, bottom = 0.2)
+                    plt.subplots_adjust(left = 0.2, bottom = 0.35)
 
 
 
             plt.tight_layout()
-            plt.savefig('segmented_plots_frequency.png')
+            plt.savefig('segmented_plots_frequency.png' , dpi = 200, bbox_inches = 'tight')
                 
 
         # pdf = FPDF()
@@ -3279,13 +3580,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # print("success!!")
 
-    
-
+ 
     def generate_report(self):
 
         pdf = FPDF()
         path = r"C:\Users\Admin\OneDrive\Desktop\Test"
-
+        # num_subplots = 3
               
         if self.LE_add_segment_value.text() == "":
             # QtWidgets.QMessageBox.information(self,"No segments added!")
@@ -3313,7 +3613,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.delete_segments()
             print("Segments are deleted!")
 
-        self.get_segmented_plots()
+        self.get_segmented_plots() 
            
         pdf.add_page()
         pdf.set_font("Arial", size = 12)
@@ -3322,8 +3622,31 @@ class MainWindow(QtWidgets.QMainWindow):
                         
             pdf.image('Segmentation_Voltage.png', w=200,h=200)
             pdf.ln(20)
-      
-            pdf.image('segmented_plots_voltage.png', w=200,h=200)
+
+
+            # pdf.add_page()
+            # pdf.image('segmented_voltage_before.png', w=200, h=200)
+            
+            # for i in range(0, len(self.segments) + 1, num_subplots):
+                
+            #     #Check for subplots > 3
+                    
+            #     if i % num_subplots == 0:
+            #         # if i!=0:
+            #         print("Index I: ", i)
+            #         pdf.add_page()
+            #         pdf.image('segmented_plots_voltage.png', w = 200, h = 200)
+            #         # pdf.ln(20)
+            #         # pdf.image('segmented_voltage_after.png', w = 200, h = 200)
+
+            #     else:
+            #         pdf.image('segmented_plots_voltage.png', w = 200, h = 200)
+            #         # pdf.ln(20)
+            #         # pdf.image('segmented_voltage_after.png', w = 200, h = 200)
+
+        
+                
+            pdf.image('segmented_plots_voltage.png', w = 200, h = 0, type = 'PNG')  ##image to pdf insert of complete subplots. 
 
             pdf.output(path + 'VoltageReport.pdf','F')
 
@@ -3333,7 +3656,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pdf.image('Segmentation_Current.png', w=200,h=200)
             pdf.ln(20)
       
-            pdf.image('segmented_plots_current.png', w=200,h=200)
+            pdf.image('segmented_plots_current.png', w = 200, h = 0, type = 'PNG')
 
             pdf.output(path + 'CurrentReport.pdf','F')
 
@@ -3341,7 +3664,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pdf.cell(60,10, 'Frequency Report.', 0, 1, 'C')
             pdf.image('Segmentation_Frequency.png', w=200,h=200)
             pdf.ln(20)
-            pdf.image('segmented_plots_frequency.png',w=200, h=200)
+            pdf.image('segmented_plots_frequency.png',w = 200, h = 0, type = 'PNG')
             pdf.output(path + 'FrequencyReport.pdf','F')
 
         print("Success!")
