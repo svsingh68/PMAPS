@@ -30,11 +30,11 @@
      <string notr="true"/>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
-      <string>Input section</string>
+      <string>Load Data</string>
      </attribute>
      <widget class="QLineEdit" name="LE_file_path">
       <property name="geometry">
@@ -260,7 +260,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>question.png</pixmap>
+       <pixmap>../../../../../../.designer/backup/question.png</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -297,7 +297,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>question.png</pixmap>
+       <pixmap>../../../../../../.designer/backup/question.png</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -334,7 +334,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>question.png</pixmap>
+       <pixmap>../../../../../../.designer/backup/question.png</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -365,7 +365,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>question.png</pixmap>
+       <pixmap>../../../../../../.designer/backup/question.png</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -442,10 +442,29 @@
        <number>0</number>
       </property>
      </widget>
+     <widget class="QLabel" name="label_24">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>641</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>                 Post-Mortem Analyzer for Power Systems</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
-      <string>Alignment section</string>
+      <string>Waveform Alignment</string>
      </attribute>
      <widget class="QGroupBox" name="groupBox">
       <property name="geometry">
@@ -599,7 +618,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>question.png</pixmap>
+         <pixmap>../../../../../../.designer/backup/question.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -689,7 +708,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>question.png</pixmap>
+         <pixmap>../../../../../../.designer/backup/question.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -805,7 +824,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>question.png</pixmap>
+         <pixmap>../../../../../../.designer/backup/question.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -845,7 +864,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>question.png</pixmap>
+         <pixmap>../../../../../../.designer/backup/question.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -1217,7 +1236,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>698</width>
+         <width>702</width>
          <height>2487</height>
         </rect>
        </property>
@@ -1552,7 +1571,7 @@
     </widget>
     <widget class="QWidget" name="tab_4">
      <attribute name="title">
-      <string>Instantneous waveforms</string>
+      <string>Waveform Viewer</string>
      </attribute>
      <widget class="QComboBox" name="list_of_files_qty">
       <property name="geometry">
@@ -1604,7 +1623,7 @@
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
-      <string>Segmentation section</string>
+      <string>Waveform Segmentation</string>
      </attribute>
      <widget class="QCheckBox" name="CB_voltage_rms_2">
       <property name="geometry">
@@ -1991,6 +2010,35 @@
        <string>Report</string>
       </property>
      </widget>
+     <widget class="PlotWidget" name="correlation_plot" native="true">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>540</y>
+        <width>591</width>
+        <height>201</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_22">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>520</y>
+        <width>684</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+        <underline>true</underline>
+       </font>
+      </property>
+      <property name="text">
+       <string>Correlation Plot</string>
+      </property>
+     </widget>
     </widget>
    </widget>
   </widget>
@@ -1999,7 +2047,7 @@
   <customwidget>
    <class>PlotWidget</class>
    <extends>QWidget</extends>
-   <header location="global">pyqtgraph</header>
+   <header>pyqtgraph</header>
    <container>1</container>
   </customwidget>
   <customwidget>
